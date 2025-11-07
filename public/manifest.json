@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "WebGrep for Chrome",
+  "version": "1.0.0",
+  "description": "A Chrome extension for searching text within web pages using Regex patterns.",
+  "action": {
+    "default_popup": "index.html"
+  },
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["<all_urls>"],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "service-worker.js"
+  }
+}
