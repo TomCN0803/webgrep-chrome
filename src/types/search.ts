@@ -17,4 +17,5 @@ export interface SearchResult {
   matches: MatchData[];
   totalCount: number;
   searchTime: number;
+  error?: string;
 }

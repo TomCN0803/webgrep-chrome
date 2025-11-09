@@ -18,54 +18,49 @@ export class SearchEngine {
       return { matches: [], totalCount: 0, searchTime: 0 };
     }
 
-    // Build regex pattern
-    const pattern = this.buildPattern(searchText, options);
-    if (!pattern) {
-      return { matches: [], totalCount: 0, searchTime: 0 };
+    try {
+      const pattern = this.buildPattern(searchText, options);
+
+      const matches: MatchData[] = [];
+      for (const textNode of this.getTextNodesGenerator(rootElement)) {
+        if (matches.length >= this.MAX_MATCHES) break;
+
+        const nodeMatches = this.findMatchesInNode(textNode, pattern, matches.length);
+        matches.push(...nodeMatches);
+      }
+
+      const searchTime = performance.now() - startTime;
+
+      return {
+        matches,
+        totalCount: matches.length,
+        searchTime,
+      };
+    } catch (error) {
+      return {
+        matches: [],
+        totalCount: 0,
+        searchTime: performance.now() - startTime,
+        error: error instanceof Error ? error.message : 'Unknown error during search',
+      };
     }
-
-    const matches: MatchData[] = [];
-    for (const textNode of this.getTextNodesGenerator(rootElement)) {
-      if (matches.length >= this.MAX_MATCHES) break;
-
-      const nodeMatches = this.findMatchesInNode(textNode, pattern, matches.length);
-      matches.push(...nodeMatches);
-    }
-
-    const searchTime = performance.now() - startTime;
-
-    return {
-      matches,
-      totalCount: matches.length,
-      searchTime,
-    };
   }
 
   /**
    * Build regex pattern from search text and options
    */
-  private buildPattern(searchText: string, options: SearchOptions): RegExp | null {
+  private buildPattern(searchText: string, options: SearchOptions): RegExp {
     let pattern = searchText;
 
-    // Escape regex special characters if not in regex mode
     if (!options.isRegex) {
       pattern = this.escapeRegex(pattern);
     }
 
-    // Whole word matching
     if (options.wholeWord) {
       pattern = `\\b${pattern}\\b`;
     }
 
-    // Build flags
-    const flags = options.caseSensitive ? 'g' : 'gi';
-
-    try {
-      return new RegExp(pattern, flags);
-    } catch (e) {
-      console.error('Invalid regex pattern:', e);
-      return null;
-    }
+    return new RegExp(pattern, options.caseSensitive ? 'g' : 'gi');
   }
 
   /**
