@@ -13,7 +13,6 @@ export class SearchEngine {
     rootElement: HTMLElement = document.body,
   ): SearchResult {
     const startTime = performance.now();
-    const matches: MatchData[] = [];
 
     if (!searchText) {
       return { matches: [], totalCount: 0, searchTime: 0 };
@@ -25,11 +24,8 @@ export class SearchEngine {
       return { matches: [], totalCount: 0, searchTime: 0 };
     }
 
-    // Walk the DOM and find all text nodes
-    const textNodes = this.getTextNodes(rootElement);
-
-    // Search through each text node
-    for (const textNode of textNodes) {
+    const matches: MatchData[] = [];
+    for (const textNode of this.getTextNodesGenerator(rootElement)) {
       if (matches.length >= this.MAX_MATCHES) break;
 
       const nodeMatches = this.findMatchesInNode(textNode, pattern, matches.length);
@@ -79,27 +75,16 @@ export class SearchEngine {
     return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
-  /**
-   * Get all visible text nodes in the DOM
-   */
-  private getTextNodes(rootElement: HTMLElement): Text[] {
-    const textNodes: Text[] = [];
-
+  private *getTextNodesGenerator(rootElement: HTMLElement): Generator<Text> {
     const walker = document.createTreeWalker(rootElement, NodeFilter.SHOW_TEXT, {
       acceptNode: (node) => this.shouldIncludeNode(node),
     });
 
-    let node: Node | null;
-    while ((node = walker.nextNode())) {
-      textNodes.push(node as Text);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      yield node as Text;
     }
-
-    return textNodes;
   }
 
-  /**
-   * Determine if a text node should be included in the search
-   */
   private shouldIncludeNode(node: Node): number {
     const parent = node.parentElement;
     if (!parent) return NodeFilter.FILTER_REJECT;
@@ -141,11 +126,8 @@ export class SearchEngine {
     // Reset regex state
     pattern.lastIndex = 0;
 
-    let match: RegExpExecArray | null;
-    while ((match = pattern.exec(text))) {
-      const matchData = this.createMatchData(textNode, match, startIndex + matches.length);
-
-      matches.push(matchData);
+    for (let match = pattern.exec(text); match; match = pattern.exec(text)) {
+      matches.push(this.createMatchData(textNode, match, startIndex + matches.length));
 
       // Prevent infinite loop for zero-width matches
       if (match.index === pattern.lastIndex) {
