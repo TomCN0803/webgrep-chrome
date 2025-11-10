@@ -17,6 +17,7 @@ export class SearchController {
   };
   private searchResult: SearchResult | null = null;
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private pendingSearchReject: ((reason?: unknown) => void) | null = null;
 
   // Callbacks for UI updates
   private onSearchCompleteCallback?: (result: SearchResult) => void;
@@ -44,10 +45,16 @@ export class SearchController {
 
     if (this.searchDebounceTimer !== null) {
       clearTimeout(this.searchDebounceTimer);
+      if (this.pendingSearchReject) {
+        this.pendingSearchReject(new Error('Search cancelled by new search'));
+        this.pendingSearchReject = null;
+      }
     }
 
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+      this.pendingSearchReject = reject;
       this.searchDebounceTimer = setTimeout(() => {
+        this.pendingSearchReject = null;
         const result = this.performSearch(query, options);
         resolve(result);
       }, debounceMs);
@@ -149,6 +156,11 @@ export class SearchController {
     if (this.searchDebounceTimer !== null) {
       clearTimeout(this.searchDebounceTimer);
       this.searchDebounceTimer = null;
+      // Reject any pending search promise
+      if (this.pendingSearchReject) {
+        this.pendingSearchReject(new Error('Search cleared'));
+        this.pendingSearchReject = null;
+      }
     }
   }
 

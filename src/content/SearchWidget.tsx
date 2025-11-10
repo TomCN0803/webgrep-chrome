@@ -26,17 +26,27 @@ export function SearchWidget({ controller, onClose }: SearchWidgetProps) {
   }, []);
 
   useEffect(() => {
-    controller.search(query, options).then((result) => {
-      if (result.error) {
-        setSearchError(result.error);
-        setCurrentMatchIndex(-1);
-        setTotalMatches(0);
-      } else {
-        setSearchError('');
-        setCurrentMatchIndex(result.totalCount > 0 ? 1 : -1);
-        setTotalMatches(result.totalCount);
-      }
-    });
+    controller
+      .search(query, options)
+      .then((result) => {
+        if (result.error) {
+          setSearchError(result.error);
+          setCurrentMatchIndex(-1);
+          setTotalMatches(0);
+        } else {
+          setSearchError('');
+          setCurrentMatchIndex(result.totalCount > 0 ? 1 : -1);
+          setTotalMatches(result.totalCount);
+        }
+      })
+      .catch((error) => {
+        if (
+          error?.message !== 'Search cancelled by new search' &&
+          error?.message !== 'Search cleared'
+        ) {
+          console.error('Search error:', error);
+        }
+      });
   }, [controller, query, options]);
 
   const toggleOption = (optionKey: keyof SearchOptions) => {
